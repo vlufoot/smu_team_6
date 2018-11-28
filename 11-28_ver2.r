@@ -217,7 +217,7 @@ rS_rules <- apriori(rS_trans, parameter =
                       list(support=0.00005,
                            confidence = 0.5))
 
-rS_rules_2 <- subset(rS_rules, !items %pin% c("공병"))
+rS_rules <- subset(rS_rules, !items %pin% c("공병"))
 rS_rules_2 <- subset(rS_rules_2, !items %pin% c("상품군미지정"))
 rS_rules_2 <- subset(rS_rules_2, !items %pin% c("김밥"))
 rS_rules_2 <- subset(rS_rules_2, !items %pin% c("햄"))
@@ -226,9 +226,17 @@ rS_rules_2 <- subset(rS_rules_2, !items %pin% c("상추"))
 rS_rules_2 <- subset(rS_rules_2, !items %pin% c("아이스크림"))
 rS_rules_3 <- subset(rS_rules_2, items %pin% c("옷"))
 
-inspect(sort(rS_rules_3,by="lift"))
+inspect(sort(rS_rules,by="lift")[1:30])
 
 ### 시간대별로 나누든지 해야할듯.. 너무 당연함
+head(shop,10)
+
+### 월별
+
+### 계절별
+
+### 고객별
+head(customer)
 
 
 
@@ -252,7 +260,53 @@ inspect(market.rules)
 
 
 ###########################################################
-###########################################################
+
+#RFM 분석
+
+shopping %>%  head()
+
+  ## R
+
+s_R <- shopping %>% group_by(ID) %>% 
+  summarise(Recency = max(DE_DT)) %>% 
+  arrange(desc(Recency))
+
+  ## F
+  ## 횟수만 알면 되니 영수증 중복 삭제
+
+shopping2 <- shopping[!duplicated(shopping$R_NUM)]
+length(unique(shopping2$R_NUM))
+
+s_F<- shopping2 %>% group_by(ID) %>% 
+  summarise(Frequency = n()) %>% 
+  arrange(desc(Frequency))
+
+  ## M
+s_M <- shopping %>% group_by(ID) %>% 
+  summarise(Monetary = sum(BUY_AM)) %>% 
+  arrange(desc(Monetary))
+
+s_RFM <- merge(s_R,s_F, by="ID")
+s_RFM <- merge(s_RFM, s_M, by="ID")
+s_RFM %>% head(10)
+
+
+  ## 2014년 구매고객 제외(2건)
+s_RFM %>% filter(Recency < 20150101)
+s_RFM <- s_RFM %>% filter(!Recency < 20150101)
+
+summary(s_RFM)
+  
+  ## s_RFM은 상당히 한곳으로 치우쳐진 분포를 보
+hist(s_RFM$Frequency)
+hist(s_RFM$Recency)
+hist(s_RFM$Monetary)
+
+  ## 신기하당.. 로그함수 취하면 정규분포
+ggplot(s_RFM, aes(s_RFM$Monetary)) +
+  geom_histogram()+scale_x_log10()+scale_y_log10()
+
+plot(s_RFM)
 
 
 
@@ -260,11 +314,8 @@ inspect(market.rules)
 
 
 
-###########
-setkey(shop,ID)
-setkey(customer,ID)
-temp1 <- merge(shop, customer, by="ID")
-shop[PD_S_C==1]
-shop[BIZ_UNIT=="A01"&BUY_AM>100000000]
-write.csv(merge3, "shopping.csv")
-write.csv(merge4, "notshopping.csv")
+
+
+
+
+
