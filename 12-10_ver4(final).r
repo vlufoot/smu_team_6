@@ -722,7 +722,9 @@ RFM2 <- rename(RFM2, future = amount_4)
 RFM2 <- merge(RFM2,customer,by="ID")
 RFM2$AGE_PRD <- gsub("PRD","",RFM2$AGE_PRD)
 RFM2$AGE_PRD <- as.numeric(RFM2$AGE_PRD)
-RFM2 <-RFM2 %>%  select( ID, AGE_PRD, Recency, Frequency, Monetary, future)
+RFM2 <- RFM2 %>%
+  dplyr::select(ID, AGE_PRD, Recency, Frequency, Monetary, future)
+
 
 RFM2$ID <- as.character(RFM2$ID)
 RFM2$Frequency <- as.numeric(RFM2$Frequency)
@@ -785,7 +787,7 @@ ggplot(RFM2, aes(Recency,future)) + geom_jitter() + geom_smooth(method = "lm")
 ggplot(RFM2, aes(Frequency,future)) + geom_jitter() + geom_smooth(method = "lm")
 
 
-## 자이제 데이터를 7:3으로 나눠보자
+## 트레이닝셋과 테스트셋으로 나눠보자(우선 validation set은 나누지 않았다.. 다음에)
 
 head(RFM2)
 str(RFM2)
@@ -797,14 +799,114 @@ test_idx <-setdiff(idx,training_idx)
 training <- RFM2[training_idx,]
 test <- RFM2[test_idx,]
 
-## 예측력이 강한 변수는 무엇일깡?
+
+training <- training[2:6]
+test <- test[2:6]
 
 data_lm_full <- lm(future ~., data=training)
 summary(data_lm_full)
 
+predict(data_lm_full, newdata=test[1:5,])
+
+
+# 네가지 변수를 모두사용하는 것이 옳을까? 예측력을 올리기위해 변수선택을 해보자
+library(MASS)
+
+data_step <- stepAIC(data_lm_full, scope=list(upper = ~.^2, lower=~1))
+data_step
+summary(data_step)
+length(coef(data_step))
+# 여러 변수간 상호작용까고려한결과 10개가 됐고 Adjusted R-squared가 조금 상승했다
+
+y_obs <- test$future
+yhat_lm <- predict(data_lm_full, newdata=test)
+yhat_step <- predict(data_step, newdata=test)
+
+
+install.packages("caret")
+library(caret)
+
+RMSE(y_obs, yhat_lm)
+RMSE(y_obs, yhat_step)
+
+
+# 나무모형을 적용해보자
+library(rpart)
+data_tr <- rpart(future ~., data= training)
+data_tr
+printcp(data_tr)
+summary(data_tr)
+
+opar <- par(mfrow = c(1,1), xpd= NA)
+plot(data_tr)
+text(data_tr, use.n= TRUE)
+par(opar)
+
+# 으응.. 왜 frequency가 작아야 구매액이 크지??
+# 미래에 높은 구매를 하는 고객은 가성비를 추구하는 shopper들보다 팍팍쓰는애들이라는 뜻..?
+# recency,age는 그렇게 큰 영향을 주지 않는것같다
+# 나무치고 예측력이 꽤 높은데..?
+
+yhat_tr <- predict(data_tr, test)
+RMSE(y_obs,yhat_tr)
 
 
 
+
+  # 랜덤포레스트를 해보자
+  # 확실히 오래걸린다;;
+
+install.packages("randomForest")
+library(randomForest)
+
+set.seed(184)
+data_rf <- randomForest(future ~., training)
+data_rf
+
+  #나무의 갯수에 따른 mse의 감소를 알려준다
+  #적당히 30개쯤 해도될듯???
+plot(data_rf)
+
+  # 변수의 중요도를 알 수 있다
+  # 확실히 현재까지 구매액과 얼마나 자주구매해왔는지가 가장 큰 영향을 끼친다
+
+varImpPlot(data_rf)
+
+  #RMSE는?
+yhat_rf <- predict(data_rf, newdata = test)
+RMSE(y_obs, yhat_rf)
+
+
+
+  # 선형모형, 스텝변수 선택한 선형 모형, 트리모델, 랜덤포레스트의 성능을 비교해보자
+
+data.frame(lm = RMSE(y_obs, yhat_lm),
+            step = RMSE(y_obs, yhat_step),
+              tree = RMSE(y_obs, yhat_tr),
+                rf = RMSE(y_obs, yhat_rf))
+  
+  # 스텝변수를 선택한 선형모델이 가장 예측력이 좋은 것을 알 수 있다 (최종모형사용)
+
+  # 5개만 예측해보자
+predict(data_step, newdata=test[1140:1150,])
+
+final <- test[1140:1150,]
+
+  # 자연로그를 풀어보자 exp()
+
+pred <- data.frame(prediction = c(11.58904, 14.12214, 15.76977, 14.06887, 14.69130, 15.46354,
+                             14.75055, 13.97000, 13.64670, 13.45964, 14.52732 ))
+
+final <- cbind(final,pred)
+final$Recency <- exp(final$Recency) 
+final$Frequency <- exp(final$Frequency) 
+final$Monetary <- exp(final$Monetary) 
+final$future <- exp(final$future) 
+final$prediction <- exp(final$prediction) 
+
+final
+
+# ㅎㅎ.. 생각보다 많이차이난당^^!
 
 
 
