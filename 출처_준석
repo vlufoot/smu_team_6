@@ -1,0 +1,23 @@
+*데이터 출처 
+롯데멤버스, (2017) , '제 4회 엘포인트 빅데이터 컴피티션'
+
+*데이터 로드 부분 코드 참고
+R Friend 블로그, [R] 대용량 text 데이터 빠르게 불러오기 : data.table 패키지의 fread() 함수,
+http://rfriend.tistory.com/337
+
+*k-means 3차원 시각화 부분 코드 참고
+Wilame Lima Vallantin, (2018 Sep 7) , Apply RFM principles to cluster customers with K-Means, 
+https://towardsdatascience.com/apply-rfm-principles-to-cluster-customers-with-k-means-fef9bcc9ab16
+
+*RFM 고객타입명 & 분석 프로세스 참고
+Derya Birant, (2011), Data Mining Using RFM Analysis, Dokuz Eylul University, Turkey
+
+*장바구니분석 참고
+Jalayer Academy, (2015), R - Association Rules - Market Basket Analysis (part 1), 
+https://www.youtube.com/watch?v=b5hgDPa7a2k
+
+Jalayer Academy, (2015), R - Association Rules - Market Basket Analysis (part 2), 
+https://www.youtube.com/watch?v=Gy_nqzJMNrI
+
+*Regression 부분 코드 및 프로세스 참고
+권재명, (2017), 따라하며 배우는 데이터 과학, 13장 빅데이터 회귀분석 I: 부동산 가격 예측
